@@ -90,21 +90,63 @@ function render_metabox( $post ) {
  * This function retrieves the current post's excerpt, processes any shortcodes,
  * and applies automatic paragraph formatting to ensure the excerpt is displayed
  * with proper HTML formatting in the Gutenberg editor.
+ * 
+ * It is important to check if we want to apply the custom rendering only to single post views,
+ * because if we return an empty excerpt, other areas of the site which rely on the excerpt (i.e. archive pages) will not display anything.
+ *
+ * @param string $block_content The block content.
+ * @param array $block The block attributes.
+ * @return string The formatted excerpt or the original content if not a single post view.
  */
-function custom_render_excerpt_block( $attributes, $content ) {
-    global $post;
-
-    if ( isset( $post ) ) {
-        $excerpt = $post->post_excerpt;
-        $excerpt = do_shortcode( $excerpt );
-        $excerpt = wpautop( $excerpt );
-
-        return $excerpt;
+function custom_render_single_post_excerpt($block_content, $block) {
+    // Ensure block content is not null and is a string
+    if (!is_string($block_content) || $block_content === null) {
+        return $block_content;
     }
 
-    return '';
+    // Check if the block is the post excerpt block
+    if ($block['blockName'] === 'core/post-excerpt') {
+        // Apply custom excerpt rendering only on single post view
+        if (is_singular('post') && in_the_loop() && is_main_query()) {
+            // Get the current post object
+            $post = get_post();
+            if ($post) {
+                // Retrieve the post excerpt
+                $excerpt = $post->post_excerpt;
+
+                // Check if excerpt is not empty
+                if (!empty($excerpt)) {
+                    // Process shortcodes and apply automatic paragraph formatting
+                    $formatted_excerpt = wpautop(do_shortcode($excerpt));
+                    // Return the formatted excerpt
+                    return $formatted_excerpt;
+                } else {
+                    // Return an empty string if the excerpt is empty
+                    return '';
+                }
+            } else {
+                // Return an empty string if the post object is not found
+                return '';
+            }
+        }
+    }
+
+    // Fallback to default behavior for other views
+    return $block_content;
 }
-add_filter( 'render_block_core/post-excerpt', __NAMESPACE__ . '\custom_render_excerpt_block', 10, 2 );
+
+/**
+ * Apply the custom render function conditionally based on the context.
+ *
+ * This function adds the custom render filter for single post views only.
+ */
+function apply_custom_excerpt_render() {
+    if (is_singular('post')) {
+        add_filter('render_block', __NAMESPACE__ . '\custom_render_single_post_excerpt', 10, 2);
+    }
+}
+add_action('wp', __NAMESPACE__ . '\apply_custom_excerpt_render');
+
 
 /**
  * Remove the alignment buttons from the post excerpt WYSIWYG.
