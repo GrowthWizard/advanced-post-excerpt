@@ -85,6 +85,28 @@ function render_metabox( $post ) {
 }
 
 /**
+ * Custom render function for the post excerpt block in the Gutenberg editor.
+ *
+ * This function retrieves the current post's excerpt, processes any shortcodes,
+ * and applies automatic paragraph formatting to ensure the excerpt is displayed
+ * with proper HTML formatting in the Gutenberg editor.
+ */
+function custom_render_excerpt_block( $attributes, $content ) {
+    global $post;
+
+    if ( isset( $post ) ) {
+        $excerpt = $post->post_excerpt;
+        $excerpt = do_shortcode( $excerpt );
+        $excerpt = wpautop( $excerpt );
+
+        return $excerpt;
+    }
+
+    return '';
+}
+add_filter( 'render_block_core/post-excerpt', __NAMESPACE__ . '\custom_render_excerpt_block', 10, 2 );
+
+/**
  * Remove the alignment buttons from the post excerpt WYSIWYG.
  *
  * @param array  $buttons   An array of teenyMCE buttons.
